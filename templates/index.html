@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FaceGate RDS - Buku Tamu Digital</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0a0f1a, #0a192f);
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo {
+            font-size: 32px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff, #64ffda);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        .card {
+            background: rgba(17, 24, 39, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px 0;
+            border: 1px solid rgba(100, 255, 218, 0.2);
+        }
+        
+        input {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            background: #1e2a3a;
+            border: 1px solid #2d3a4a;
+            border-radius: 12px;
+            color: white;
+            font-size: 16px;
+        }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #64ffda;
+            color: #0a192f;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(100, 255, 218, 0.3);
+        }
+        
+        .btn-danger {
+            background: #ff4444;
+            color: white;
+        }
+        
+        .visitor-list {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .visitor-item {
+            background: rgba(30, 42, 58, 0.5);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        .visitor-item:hover {
+            background: rgba(100, 255, 218, 0.1);
+        }
+        
+        .status-active {
+            color: #64ffda;
+        }
+        
+        .status-completed {
+            color: #ffaa33;
+        }
+        
+        .badge {
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="logo">FaceGate RDS</h1>
+            <p style="color: #94a3b8;">Sistem Manajemen Pengunjung Berbasis Wajah</p>
+        </div>
+        
+        <div class="card">
+            <h3>📝 Check-in / Check-out</h3>
+            <input type="text" id="nama" placeholder="Nama Lengkap">
+            <button class="btn-primary" onclick="checkin()">✅ Check-in</button>
+            <button class="btn-danger" onclick="checkout()">❌ Check-out</button>
+        </div>
+        
+        <div class="card">
+            <h3>📋 Daftar Pengunjung</h3>
+            <div id="visitorList" class="visitor-list"></div>
+        </div>
+    </div>
+    
+    <script>
+        let currentVisitorId = null;
+        
+        async function checkin() {
+            const nama = document.getElementById('nama').value;
+            if (!nama) {
+                alert('Masukkan nama!');
+                return;
+            }
+            
+            const res = await fetch('/checkin', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({nama: nama})
+            });
+            
+            const data = await res.json();
+            if (data.status === 'success') {
+                alert(`✅ Selamat datang ${nama}!`);
+                document.getElementById('nama').value = '';
+                loadVisitors();
+            }
+        }
+        
+        async function checkout() {
+            if (!currentVisitorId) {
+                alert('Pilih pengunjung yang akan check-out!');
+                return;
+            }
+            
+            const res = await fetch('/checkout', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({id: currentVisitorId})
+            });
+            
+            const data = await res.json();
+            if (data.status === 'success') {
+                alert('✅ Check-out berhasil!');
+                currentVisitorId = null;
+                loadVisitors();
+            }
+        }
+        
+        async function loadVisitors() {
+            const res = await fetch('/visitors');
+            const visitors = await res.json();
+            
+            const container = document.getElementById('visitorList');
+            container.innerHTML = '';
+            
+            visitors.forEach(v => {
+                const div = document.createElement('div');
+                div.className = 'visitor-item';
+                div.onclick = () => {
+                    currentVisitorId = v.id;
+                    document.querySelectorAll('.visitor-item').forEach(item => {
+                        item.style.border = 'none';
+                    });
+                    div.style.border = '2px solid #64ffda';
+                };
+                
+                div.innerHTML = `
+                    <div>
+                        <strong>${v.nama}</strong><br>
+                        <small>Check-in: ${v.checkin}</small>
+                        ${v.checkout ? `<br><small>Check-out: ${v.checkout}</small>` : ''}
+                    </div>
+                    <div class="badge ${v.status === 'active' ? 'status-active' : 'status-completed'}">
+                        ${v.status === 'active' ? '🟢 DI DALAM' : '🔴 SUDAH PULANG'}
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+        
+        loadVisitors();
+        setInterval(loadVisitors, 5000);
+    </script>
+</body>
+</html>

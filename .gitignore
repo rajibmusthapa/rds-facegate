@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+visitors.json
+face_data.json
+.env
+venv/
+.idea/
+.vscode/
+*.log
